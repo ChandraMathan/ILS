@@ -1,0 +1,1 @@
+this folder contains scripts to save xml data from 'labelImg' package to create bounding box location and also scripts to conver this xml to required format (for example from xml to retinanet consumable format)
