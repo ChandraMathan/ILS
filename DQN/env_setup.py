@@ -15,6 +15,8 @@ import pandas as pd
 from collections import deque
 
 from sklearn import preprocessing
+import pickle
+import random
 
 
 class EnvGrid:
@@ -151,3 +153,45 @@ class EnvGrid:
             next_state = state_list
 
         return next_state, reward, done
+    
+
+
+class EnvWeb:
+
+    def __init__(self):
+
+        with open('../integration/data/element_dictionary.pkl', 'rb') as f:
+            self.element_dict = pickle.load(f)
+        
+
+        self.input_grid_num = np.asarray([self.element_dict[num]['input']['grid_num'] for num in range(1,len(self.element_dict)+1)])
+        self.label_grid_num = [self.element_dict[num]['label']['grid_num'] for num in range(1,len(self.element_dict)+1)]
+
+        self.index_list = [num for num in range(len(self.label_grid_num))]
+        self.rand_label_index = None
+            
+    def reset(self):
+        self.rand_label_index = random.choice(self.index_list)
+        label = np.asarray(self.input_grid_num[self.rand_label_index])
+        state = np.append(label, self.input_grid_num)
+        
+        return state
+
+    def env_behaviour(self, state_list, action):
+
+        
+        expected_action = self.input_grid_num[self.rand_label_index]
+        
+
+        if expected_action == action:
+            reward = 0
+            done = True
+            next_state = np.asarray([-1,-1,-1,-1,-1,-1,-1,-1])
+        else:
+            reward = -1
+            done = False
+            next_state = state_list
+
+        return next_state, reward, done
+
+
