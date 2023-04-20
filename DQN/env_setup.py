@@ -176,6 +176,14 @@ class EnvWeb:
         state = np.append(label, self.input_grid_num)
         
         return state
+    
+    def reset_test(self):
+        """ outputs all possible states. used for testing. donot use for training"""
+        states = []
+        for item in self.label_grid_num:
+            state = np.append(item, self.input_grid_num)
+            states.append(state)
+        return states    
 
     def env_behaviour(self, state_list, action):
 
