@@ -172,7 +172,7 @@ class EnvWeb:
             
     def reset(self):
         self.rand_label_index = random.choice(self.index_list)
-        label = np.asarray(self.input_grid_num[self.rand_label_index])
+        label = np.asarray(self.label_grid_num[self.rand_label_index])
         state = np.append(label, self.input_grid_num)
         
         return state
@@ -188,13 +188,21 @@ class EnvWeb:
     def env_behaviour(self, state_list, action):
 
         
-        expected_action = self.input_grid_num[self.rand_label_index]
-        
+        #expected_action = self.input_grid_num[self.rand_label_index]
+        label = state_list[0]
+
+        if label in self.label_grid_num:
+            label_index = self.label_grid_num.index(label)
+            expected_action = self.input_grid_num[label_index]
+        else:
+            expected_action = -1
+
 
         if expected_action == action:
-            reward = 0
+            reward = 0.1
             done = True
             next_state = np.asarray([-1,-1,-1,-1,-1,-1,-1,-1])
+            #next_state = 
         else:
             reward = -1
             done = False
