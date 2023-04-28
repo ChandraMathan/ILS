@@ -20,6 +20,8 @@ import pickle
 import time
 import os
 
+import datetime
+
 class TrainingSetup:
     """ 
     this class outtputs a dictionary for training a DQN agent
@@ -44,6 +46,9 @@ class TrainingSetup:
         self.grid_vertical = self.grid[0]
         self.grid_horizontal = self.grid[1]
 
+        self.html_element = None
+        self.image_width = None
+        self.image_height = None
         
         self.chrome_options = Options()
         self.driver = webdriver.Chrome(options=self.chrome_options)
@@ -77,12 +82,12 @@ class TrainingSetup:
     def html_size(self):
         """ returns the size of webpage """
 
-        element_html = self.driver.find_element(By.XPATH, '/html')
+        self.element_html = self.driver.find_element(By.XPATH, '/html')
 
-        image_width = element_html.size['width']
-        image_height = element_html.size['height']
+        self.image_width = self.element_html.size['width']
+        self.image_height = self.element_html.size['height']
 
-        return image_width, image_height
+        
 
     def update_location(self, webpage,ids):
         """ updates the location of the elements"""
@@ -113,7 +118,7 @@ class TrainingSetup:
             self.element_dict[webpage][id]['input']['y_centre'] = element_input.location['y'] + round((element_input.size['height']/2.0),1)
 
     
-    def location_to_grid(self, webpage, ids, image_width, image_height):
+    def location_to_grid(self, webpage, ids):
         """ updates the dictionary with grid number based on the location of the element """
 
         for id in ids:
@@ -129,12 +134,12 @@ class TrainingSetup:
             x_centre_input = self.element_dict[webpage][id]['input']['x_centre']
             
 
-            row_num_label = math.floor(y_centre_label*self.grid_vertical/image_height) #this is the previous row of the element of interest
-            col_num_label = math.ceil(x_centre_label*self.grid_horizontal/image_width) #this is the column of the element of interest
+            row_num_label = math.floor(y_centre_label*self.grid_vertical/self.image_height) #this is the previous row of the element of interest
+            col_num_label = math.ceil(x_centre_label*self.grid_horizontal/self.image_width) #this is the column of the element of interest
             grid_num_label = (row_num_label*self.grid_vertical) + col_num_label
 
-            row_num_input = math.floor(y_centre_input*self.grid_vertical/image_height) #this is the previous row of the element of interest
-            col_num_input = math.ceil(x_centre_input*self.grid_horizontal/image_width) #this is the column of the element of interest
+            row_num_input = math.floor(y_centre_input*self.grid_vertical/self.image_height) #this is the previous row of the element of interest
+            col_num_input = math.ceil(x_centre_input*self.grid_horizontal/self.image_width) #this is the column of the element of interest
             grid_num_input = (row_num_input*self.grid_vertical) + col_num_input
             
            
@@ -142,8 +147,65 @@ class TrainingSetup:
             self.element_dict[webpage][id]['label']['grid_num'] = grid_num_label
             self.element_dict[webpage][id]['input']['grid_num'] = grid_num_input
 
-    def main(self):
+    def visualization(self, screenshots_dir,webpage, ids):
 
+        """ takes screen shot and plots bounding box and centre point on labels and input field """
+
+        current_time = str(datetime.datetime.now())
+        char_remov = [":", " ", ".", "-"]
+        
+        for char in char_remov:
+            current_time = current_time.replace(char,"")
+
+        self.element_html.screenshot(screenshots_dir+"/web_"+current_time+".jpg")
+
+        im = Image.open(screenshots_dir+"/web_"+current_time+".jpg")
+        im = im.resize((self.image_width, self.image_height), Image.ANTIALIAS) #resize
+        fig, ax = plt.subplots() # Create figure and axes
+
+        # grid spacing
+        x_ticks = np.arange(0, self.image_width, round((self.image_width / self.grid_vertical),2))
+        y_ticks = np.arange(0, self.image_height, round((self.image_height / self.grid_horizontal),2))
+
+
+        ax.set_xticks(x_ticks)
+        ax.set_yticks(y_ticks)
+
+        ax.grid(True)
+
+        ax.imshow(im) #display image
+
+
+        for id in ids:
+
+            rect_input = patches.Rectangle((self.element_dict[webpage][id]['input']['x_location'] , self.element_dict[webpage][id]['input']['y_location']), self.element_dict[webpage][id]['input']['width'], self.element_dict[webpage][id]['input']['height'], linewidth=1, edgecolor='r', facecolor='none')
+            x_centre_input = self.element_dict[webpage][id]['input']['x_centre']
+            y_centre_input = self.element_dict[webpage][id]['input']['y_centre']
+
+            rect_label = patches.Rectangle((self.element_dict[webpage][id]['label']['x_location'] , self.element_dict[webpage][id]['label']['y_location']), self.element_dict[webpage][id]['label']['width'], self.element_dict[webpage][id]['label']['height'], linewidth=1, edgecolor='r', facecolor='none')
+            x_centre_label = self.element_dict[webpage][id]['label']['x_centre']
+            y_centre_label = self.element_dict[webpage][id]['label']['y_centre']
+
+            # Add the patch to the Axes
+            ax.add_patch(rect_input)
+            ax.add_patch(rect_label)
+
+            #plot cente
+            cir_label = patches.Circle((x_centre_label, y_centre_label), radius = 3, linewidth=2, edgecolor='b', facecolor='none')
+            cir_input = patches.Circle((x_centre_input, y_centre_input), radius = 1, linewidth=1, edgecolor='r', facecolor='none')
+
+            ax.add_patch(cir_label)
+            ax.add_patch(cir_input)
+
+        plt.savefig(screenshots_dir+"/web_bbox_"+current_time+".png")
+        plt.close()
+    
+    def main(self, output_dir, screenshots_dir):
+
+        """
+        sequence of actions for prepping data
+        Params: 'output_dir': location of output directory for the dictionary to be saved
+        """
 
         for webpage in self.webpages:
             
@@ -152,22 +214,27 @@ class TrainingSetup:
             time.sleep(2)
             ids = self.get_ids()
             
-            image_width, image_height = self.html_size()
+            self.html_size()
             self.update_location(webpage,ids)
-            self.location_to_grid(webpage,ids,image_width, image_height)
+            self.location_to_grid(webpage,ids)
+
+            self.visualization(screenshots_dir, webpage,ids)
             time.sleep(2)
         
         self.close_webpage()
 
         
-        with open('integration/data/element_dictionary.pkl', 'wb') as f:
+        with open(output_dir, 'wb') as f:
             pickle.dump(self.element_dict, f)
 
 
 
 webpages = ["http://localhost:3000/web1","http://localhost:3000/web2"]
 open_web = TrainingSetup(webpages,(1200,1000),(10,10),"")
-open_web.main()
+
+output_dir = 'integration/data/element_dictionary.pkl'
+screenshots_dir = 'integration/screenshots'
+open_web.main(output_dir, screenshots_dir)
 
 with open('integration/data/element_dictionary.pkl', 'rb') as f:
     element_sol = pickle.load(f)

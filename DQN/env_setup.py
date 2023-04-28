@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb 18 21:23:16 2019
-
-@author: ml
-"""
-
 
 import random
 import torch
