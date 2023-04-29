@@ -27,7 +27,7 @@ class TrainingSetup:
     this class outtputs a dictionary for training a DQN agent
 
     """
-    def __init__(self, webpages, window_size, grid, num_states):
+    def __init__(self, webpages, window_size, grid):
         
         """ 
         Params
@@ -41,7 +41,7 @@ class TrainingSetup:
         self.webpages = webpages
         self.window_size = window_size
         self.grid = grid
-        self.num_states = num_states
+        
         
         self.grid_vertical = self.grid[0]
         self.grid_horizontal = self.grid[1]
@@ -157,9 +157,9 @@ class TrainingSetup:
         for char in char_remov:
             current_time = current_time.replace(char,"")
 
-        self.element_html.screenshot(screenshots_dir+"/web_"+current_time+".jpg")
+        self.element_html.screenshot(screenshots_dir+"web_"+current_time+".jpg")
 
-        im = Image.open(screenshots_dir+"/web_"+current_time+".jpg")
+        im = Image.open(screenshots_dir+"web_"+current_time+".jpg")
         im = im.resize((self.image_width, self.image_height), Image.ANTIALIAS) #resize
         fig, ax = plt.subplots() # Create figure and axes
 
@@ -227,17 +227,4 @@ class TrainingSetup:
         with open(output_dir, 'wb') as f:
             pickle.dump(self.element_dict, f)
 
-
-
-webpages = ["http://localhost:3000/web1","http://localhost:3000/web2"]
-open_web = TrainingSetup(webpages,(1200,1000),(10,10),"")
-
-output_dir = 'integration/data/element_dictionary.pkl'
-screenshots_dir = 'integration/screenshots'
-open_web.main(output_dir, screenshots_dir)
-
-with open('integration/data/element_dictionary.pkl', 'rb') as f:
-    element_sol = pickle.load(f)
-
-print(element_sol)
 
