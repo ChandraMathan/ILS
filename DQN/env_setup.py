@@ -150,9 +150,16 @@ class EnvGrid:
 
 class EnvWeb:
 
-    def __init__(self):
+    def __init__(self, input_dict):
 
-        with open('../integration/data/element_dictionary.pkl', 'rb') as f:
+        """
+        params:
+
+        input_dict: contains dictionary of input field location, label location and thier grid numbers.
+
+        """
+
+        with open(input_dict, 'rb') as f:
             self.element_dict = pickle.load(f)
         
 
