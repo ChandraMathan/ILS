@@ -150,7 +150,7 @@ class EnvGrid:
 
 class EnvWeb:
 
-    def __init__(self, input_dict):
+    def __init__(self, input_dict, state_size):
 
         """
         params:
@@ -162,17 +162,39 @@ class EnvWeb:
         with open(input_dict, 'rb') as f:
             self.element_dict = pickle.load(f)
         
+        self.state_size = state_size
 
-        self.input_grid_num = np.asarray([self.element_dict[num]['input']['grid_num'] for num in range(1,len(self.element_dict)+1)])
-        self.label_grid_num = [self.element_dict[num]['label']['grid_num'] for num in range(1,len(self.element_dict)+1)]
+        self.input_grid_num = {}
+        self.label_grid_num = {}
 
-        self.index_list = [num for num in range(len(self.label_grid_num))]
+        self.webpages = []
+        self.curr_webpage = None
+
+        self.index_list = None 
         self.rand_label_index = None
+
+
+        for item in self.element_dict:
+            
+            self.input_grid_num[item] = np.asarray([self.element_dict[item][str(num)]['input']['grid_num'] for num in range(1,len(self.element_dict[item])+1)])
+            self.label_grid_num[item] = [self.element_dict[item][str(num)]['label']['grid_num'] for num in range(1,len(self.element_dict[item])+1)]
+            
+            self.webpages.append(item)
+        
+        
             
     def reset(self):
+        
+        self.curr_webpage = random.choice(self.webpages)
+        self.index_list = [num for num in range(len(self.label_grid_num[self.curr_webpage]))]
         self.rand_label_index = random.choice(self.index_list)
-        label = np.asarray(self.label_grid_num[self.rand_label_index])
-        state = np.append(label, self.input_grid_num)
+        label = np.asarray(self.label_grid_num[self.curr_webpage][self.rand_label_index])
+        state = np.append(label, self.input_grid_num[self.curr_webpage])
+
+        if len(state)< self.state_size:
+            for _ in range(0, self.state_size - len(state)):
+                state = np.append(state, 0)
+
         
         return state
     
@@ -186,13 +208,11 @@ class EnvWeb:
 
     def env_behaviour(self, state_list, action):
 
-        
-        #expected_action = self.input_grid_num[self.rand_label_index]
         label = state_list[0]
 
-        if label in self.label_grid_num:
-            label_index = self.label_grid_num.index(label)
-            expected_action = self.input_grid_num[label_index]
+        if label in self.label_grid_num[self.curr_webpage]:
+            label_index = self.label_grid_num[self.curr_webpage].index(label)
+            expected_action = self.input_grid_num[self.curr_webpage][label_index]
         else:
             expected_action = -1
 
@@ -201,7 +221,8 @@ class EnvWeb:
             reward = 0.1
             done = True
             next_state = np.asarray([-1,-1,-1,-1,-1,-1,-1,-1])
-            #next_state = 
+            
+            
         else:
             reward = -1
             done = False
