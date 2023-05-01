@@ -200,11 +200,32 @@ class EnvWeb:
     
     def reset_test(self):
         """ outputs all possible states. used for testing. donot use for training"""
-        states = []
-        for item in self.label_grid_num:
-            state = np.append(item, self.input_grid_num)
-            states.append(state)
-        return states    
+        
+        all_states ={}
+        for webpage in self.label_grid_num:
+            states = []
+            for item in self.label_grid_num[webpage]:
+                state = np.append(item, self.input_grid_num[webpage])
+                if len(state)< self.state_size:
+                    for _ in range(0, self.state_size - len(state)):
+                        state = np.append(state, 0)
+                states.append(state)
+            all_states[webpage] = states
+
+        actions = {}
+        for webpage in all_states:
+            action_list = []
+            for item in all_states[webpage]:
+                label = item[0]
+                if label in self.label_grid_num[webpage]:
+                    label_index = self.label_grid_num[webpage].index(label)
+                    expected_action = self.input_grid_num[webpage][label_index]
+                else:
+                    expected_action = -1
+                action_list.append(expected_action)
+            actions[webpage] = action_list
+        
+        return all_states, actions    
 
     def env_behaviour(self, state_list, action):
 
