@@ -150,19 +150,23 @@ class EnvGrid:
 
 class EnvWeb:
 
-    def __init__(self, input_dict, state_size):
+    def __init__(self, input_dict, state_size, grid):
 
         """
         params:
 
         input_dict: contains dictionary of input field location, label location and thier grid numbers.
-
+        grid (tuple): horizontal and vertical grids 
         """
 
         with open(input_dict, 'rb') as f:
             self.element_dict = pickle.load(f)
         
         self.state_size = state_size
+
+        self.grid = grid
+        self.grid_vertical = self.grid[0]
+        self.grid_horizontal = self.grid[1]
 
         self.input_grid_num = {}
         self.label_grid_num = {}
@@ -173,6 +177,8 @@ class EnvWeb:
         self.index_list = None 
         self.rand_label_index = None
 
+        self.state_unnormalized = None
+        self.state_normalized = None
 
         for item in self.element_dict:
             
@@ -195,11 +201,13 @@ class EnvWeb:
             for _ in range(0, self.state_size - len(state)):
                 state = np.append(state, 0)
 
+        self.state_unnormalized = state
+        self.state_normalized = state/(self.grid_vertical*self.grid_horizontal) #note this normalization is based on min = 0, and (x-x_min)/(x_max - x_min)
         
-        return state
+        return self.state_normalized
     
     def reset_test(self):
-        """ outputs all possible states. used for testing. donot use for training"""
+        """ outputs all possible states and corresponding actions. used for testing. donot use for training"""
         
         all_states ={}
         for webpage in self.label_grid_num:
@@ -227,10 +235,10 @@ class EnvWeb:
         
         return all_states, actions    
 
-    def env_behaviour(self, state_list, action):
+    def env_behaviour(self, action):
 
-        label = state_list[0]
-
+        #label = state_list[0]
+        label = self.state_unnormalized[0]
         if label in self.label_grid_num[self.curr_webpage]:
             label_index = self.label_grid_num[self.curr_webpage].index(label)
             expected_action = self.input_grid_num[self.curr_webpage][label_index]
@@ -241,13 +249,14 @@ class EnvWeb:
         if expected_action == action:
             reward = 0.1
             done = True
-            next_state = np.asarray([-1,-1,-1,-1,-1,-1,-1,-1])
+            next_state = np.asarray([-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0])
             
-            
+               
         else:
             reward = -1
             done = False
-            next_state = state_list
+            next_state = self.state_normalized
+            
 
         return next_state, reward, done
 

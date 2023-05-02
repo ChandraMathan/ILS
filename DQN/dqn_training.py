@@ -57,7 +57,7 @@ class Training:
             score = 0
             for t in range(max_t):
                 action = self.agent.act(state, eps) #select normalized state
-                next_state, reward,done = self.env.env_behaviour(state, action)
+                next_state, reward,done = self.env.env_behaviour(action)
                 self.agent.step(state, action, reward, next_state, done)
                 state = next_state
                 score += reward
@@ -76,20 +76,6 @@ class Training:
                 torch.save(self.agent.qnetwork_local.state_dict(), 'checkpoint.pth')
                 
             if np.mean(scores_window) >=terminal_score: #and len(consequetive_episode)>7: # and i_episode >= 1000:
-                
-                print('\nnp.mean(scores_window): ', np.mean(scores_window))
-                if len(consequetive_episode) == 0:
-                    consequetive_episode.append(i_episode)
-
-                
-                else: 
-                    if consequetive_episode[-1] == i_episode -1:
-                        consequetive_episode.append(i_episode)
-                    else:
-                        consequetive_episode = []
-
-
-            if len(consequetive_episode)>7:
 
                 print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode-100, np.mean(scores_window)))
                 torch.save(self.agent.qnetwork_local.state_dict(), 'checkpoint.pth')

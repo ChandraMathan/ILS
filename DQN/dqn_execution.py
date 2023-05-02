@@ -33,7 +33,9 @@ class DQNExecution:
 
         eps = 0.0
 
-        action = self.agent.act(state, eps)
+        state_normalized = state/np.float(self.num_vertical_grid*self.num_horizontal_grid) #note this normalization is based on min = 0, and (x-x_min)/(x_max - x_min)
+
+        action = self.agent.act(state_normalized, eps)
 
             
                 
