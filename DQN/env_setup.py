@@ -249,7 +249,7 @@ class EnvWeb:
         if expected_action == action:
             reward = 0.1
             done = True
-            next_state = np.asarray([-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0])
+            next_state = np.asarray([-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0])
             
                
         else:
