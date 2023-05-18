@@ -253,7 +253,7 @@ class EnvWeb:
             
                
         else:
-            reward = -1
+            reward = -0.1
             done = False
             next_state = self.state_normalized
             

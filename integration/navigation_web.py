@@ -87,7 +87,7 @@ class NavigateWeb:
         if grid_found == False:
             grid_diff = {}
             for items in location_data:
-                grid_diff[items] = abs(location_data[items]['input']['grid_num'] - location_data)
+                grid_diff[items] = abs(location_data[items]['input']['grid_num'] - find_grid)
 
             dict_min_key = min(grid_diff, key=grid_diff.get)
             x_location = location_data[dict_min_key]['input']['x_centre']
