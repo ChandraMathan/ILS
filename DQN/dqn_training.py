@@ -31,7 +31,7 @@ class Training:
         self.agent = Agent(state_size=state_size, action_size=self.action_size, seed=2)
 
 
-    def dqn(self, n_episodes, max_t, eps_start, eps_end, eps_decay, score_length, terminal_score):
+    def dqn(self, n_episodes, max_t, eps_start, eps_end, eps_decay, score_length, terminal_score, checkpoint_path):
         
         """Deep Q-Learning.
         
@@ -73,12 +73,12 @@ class Training:
                 print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)),eps)
             
             if i_episode % 1000 == 0:
-                torch.save(self.agent.qnetwork_local.state_dict(), 'checkpoint.pth')
+                torch.save(self.agent.qnetwork_local.state_dict(), checkpoint_path)#'checkpoint.pth')
                 
             if np.mean(scores_window) >=terminal_score: #and len(consequetive_episode)>7: # and i_episode >= 1000:
 
                 print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode-100, np.mean(scores_window)))
-                torch.save(self.agent.qnetwork_local.state_dict(), 'checkpoint.pth')
+                torch.save(self.agent.qnetwork_local.state_dict(), checkpoint_path)# 'checkpoint.pth')
                 break
                 
         return scores

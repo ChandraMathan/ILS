@@ -186,9 +186,7 @@ class EnvWeb:
             self.label_grid_num[item] = [self.element_dict[item][str(num)]['label']['grid_num'] for num in range(1,len(self.element_dict[item])+1)]
             
             self.webpages.append(item)
-        
-        
-            
+                
     def reset(self):
         
         self.curr_webpage = random.choice(self.webpages)
@@ -249,7 +247,8 @@ class EnvWeb:
         if expected_action == action:
             reward = 0.1
             done = True
-            next_state = np.asarray([-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0])
+            #next_state = np.asarray([-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0])
+            next_state = np.full((self.state_size, ), -1.0)
             
                
         else:
@@ -261,3 +260,120 @@ class EnvWeb:
         return next_state, reward, done
 
 
+class EnvWeb2D:
+
+    """ 
+    this environment is based on state shown as a single vector of x locations and y locations. 
+    actions are specified as grids
+
+    """
+
+    def __init__(self, input_dict, state_size, grid, window_size):
+
+        """
+        params:
+
+        input_dict: contains dictionary of input field location, label location and thier grid numbers.
+        grid (tuple): horizontal and vertical grids 
+        window_size (int): width and height of the images
+        """
+
+        with open(input_dict, 'rb') as f:
+            self.element_dict = pickle.load(f)
+        
+        self.state_size = state_size
+        self.window_size = window_size
+
+        self.grid = grid
+        self.grid_vertical = self.grid[0]
+        self.grid_horizontal = self.grid[1]
+
+        self.input_grid_num = {}
+        self.label_grid_num = {}
+
+        self.input_xy_location = {}
+        self.input_x_location = {}
+        self.input_y_location = {}
+
+        self.label_xy_location = {}
+        self.label_x_location = {}
+        self.label_y_location = {}
+
+        self.webpages = []
+        self.curr_webpage = None
+
+        self.index_list = None 
+        self.rand_label_index = None
+
+        self.state_unnormalized = None
+        self.state_normalized = None
+
+        #setup all states and actions in a dictionary
+
+        for item in self.element_dict:
+            
+            self.input_grid_num[item] = np.asarray([self.element_dict[item][str(num)]['input']['grid_num'] for num in range(1,len(self.element_dict[item])+1)])
+            self.label_grid_num[item] = np.asarray([self.element_dict[item][str(num)]['label']['grid_num'] for num in range(1,len(self.element_dict[item])+1)])
+
+            self.input_x_location[item] = np.asarray([self.element_dict[item][str(num)]['input']['x_centre'] for num in range(1,len(self.element_dict[item])+1)])
+            self.input_y_location[item] = np.asarray([self.element_dict[item][str(num)]['input']['y_centre'] for num in range(1,len(self.element_dict[item])+1)])
+
+            self.label_x_location[item] = np.asarray([self.element_dict[item][str(num)]['label']['x_centre'] for num in range(1,len(self.element_dict[item])+1)])
+            self.label_y_location[item] = np.asarray([self.element_dict[item][str(num)]['label']['y_centre'] for num in range(1,len(self.element_dict[item])+1)])
+
+            self.webpages.append(item)
+
+        self.state_action_dict = {}
+
+        for item in self.label_x_location:
+            item_index_state = []
+            self.state_action_dict[item] = {}
+            self.state_action_dict[item]['state'] = {}
+            self.state_action_dict[item]['action'] = {}
+
+            for index in range(0,len(self.label_x_location[item])):
+                self.state_action_dict[item]['state'][index] = {}
+                item_index_state = np.concatenate(([self.label_x_location[item][index]],self.input_x_location[item], [self.label_y_location[item][index]],self.input_y_location[item]),axis = None)
+                self.state_action_dict[item]['state'][index] = item_index_state
+                self.state_action_dict[item]['action'][index] = self.input_grid_num[item][index]
+
+        
+    def reset(self):
+        
+        self.curr_webpage = random.choice(self.webpages)
+        self.index_list = [num for num in range(len(self.state_action_dict[self.curr_webpage]['state']))]
+        self.rand_label_index = random.choice(self.index_list)
+        #label = np.asarray(self.label_grid_num[self.curr_webpage][self.rand_label_index])
+        #state = np.append(label, self.input_grid_num[self.curr_webpage])
+        state = self.state_action_dict[self.curr_webpage]['state'][self.rand_label_index]
+
+        if len(state)< self.state_size:
+            for _ in range(0, self.state_size - len(state)):
+                state = np.append(state, 0)
+
+        self.state_unnormalized = state
+        self.state_normalized = state/max(self.window_size) #note this normalization is based on min = 0, and (x-x_min)/(x_max - x_min)
+          
+        return self.state_normalized
+
+    def env_behaviour(self, action):
+
+        expected_action = self.state_action_dict[self.curr_webpage]['action'][self.rand_label_index]
+
+        if expected_action == action:
+            reward = 0.1
+            done = True
+            next_state = np.full((self.state_size, ), -1.0)
+        
+        else:
+            reward = -0.1
+            done = False
+            next_state = self.state_normalized
+            
+
+        return next_state, reward, done
+
+    def get_data(self):
+
+        return self.state_action_dict
+        

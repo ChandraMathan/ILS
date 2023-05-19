@@ -20,7 +20,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent():
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, seed):
+    def __init__(self, state_size, action_size, checkpoint_path,seed):
         """Initialize an Agent object.
         
         Params
@@ -35,9 +35,11 @@ class Agent():
 
         # Q-Network
         self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
-        self.qnetwork_local.load_state_dict(torch.load('checkpoint.pth'))
+        #self.qnetwork_local.load_state_dict(torch.load('checkpoint.pth'))
+        self.qnetwork_local.load_state_dict(torch.load(checkpoint_path))
         self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
-        self.qnetwork_target.load_state_dict(torch.load('checkpoint.pth'))
+        #self.qnetwork_target.load_state_dict(torch.load('checkpoint.pth'))
+        self.qnetwork_target.load_state_dict(torch.load(checkpoint_path))
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
 
         # Replay memory
