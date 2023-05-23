@@ -1,12 +1,30 @@
 
 import os
 import pickle
+import json
+
+#load data or define the steps
+
+# Open the file in read mode
+with open('/Users/ml/Downloads/data_poc.json', 'r') as file:
+    content = file.read()
+
+# Print the content of the file
+
+
+process_steps = json.loads(content)
 
 
 #write test cases and save as pickle
 instruction_dir = 'process_steps.pkl'
-process_steps = ["navigate to url:http://localhost:3000/webtrain1", "enter 'First name test' in field 'First Name'", "enter 'AUS' in field 'Country of Birth'",
-                 "navigate to url:http://localhost:3000/webtrain5", "enter 'UTS' in field 'Institution Name'", "enter 'Computer Science' in field 'Course Name'"]
+
+""" 
+process_steps = [
+                "navigate to url:http://localhost:3000/webtrain1", "enter 'First name test' in field 'First Name'", "enter 'AUS' in field 'Country of Birth'",
+                 "navigate to url:http://localhost:3000/webtrain5", "enter 'UTS' in field 'Institution Name'", "enter 'Computer Science' in field 'Course Name'"
+                 ]
+
+"""
 
 #pre processing instructions: split in to instructions and data 
 

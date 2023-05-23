@@ -202,7 +202,7 @@ with open(dict_web_dir, 'rb') as f:
 # %%
 
 import time
-
+nav_web_test = NavigateWeb(window_size, grid)
 web_page = ""
 previous_web_page = ""
 grid_num_lst = []
@@ -230,14 +230,15 @@ for item in instruction_data:
 
     if (action == 0 and count_webpage>=2):
 
-        nav_web_test = NavigateWeb(window_size, grid)
+        
         nav_web_test.main_data(previous_web_page, dict_web_elements[web_page], grid_num_lst, data_lst, screenshots_dir)
         grid_num_lst = []
         data_lst = []
+        time.sleep(2)
 
     
 nav_web_test.main_data(web_page, dict_web_elements[web_page], grid_num_lst, data_lst, screenshots_dir)
-        
+time.sleep(5)        
 nav_web_test.close_webpage()    
 
 
