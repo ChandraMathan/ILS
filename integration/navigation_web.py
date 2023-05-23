@@ -28,6 +28,7 @@ class NavigateWeb:
         
         
         self.chrome_options = Options()
+        self.chrome_options.add_experimental_option("detach", True)
         self.driver = webdriver.Chrome(options=self.chrome_options)
         self.driver.set_window_size(self.window_size[0],self.window_size[1])
 
@@ -96,14 +97,14 @@ class NavigateWeb:
 
         return (x_location, y_location)
 
-    def nav_web(self, input_location):
+    def nav_web(self, input_location,input_value):
 
-        time.sleep(2)
+        time.sleep(1)
         action = webdriver.common.action_chains.ActionChains(self.driver)
         x_offset = round(input_location[0] - self.image_width/2.0,1)
         y_offset = round(input_location[1] - self.image_height/2.0,1)
 
-        action.move_to_element_with_offset(self.element_html, x_offset, y_offset).click().send_keys("yes").perform()
+        action.move_to_element_with_offset(self.element_html, x_offset, y_offset).click().send_keys(input_value).perform()
 
 
     def screenshots(self, screenshot_dir):
@@ -129,7 +130,25 @@ class NavigateWeb:
             
             coordinates = self.coordinates_from_data(item,webele_location)
             #coordinates = self.grid_to_coordinates(item)
-            self.nav_web(coordinates)
+            self.nav_web(coordinates,"yes")
+        
+        #self.screenshots(screenshot_dir)
+
+    def main_data(self, webpage, webele_location ,input_grid, data, screenshot_dir):
+
+        """
+        sequence of actions for execution
+        Params: 'input_locations': grid number for the input field
+               'webelelocation': dictionary of location of web lements including label and input field 
+        """
+        self.open_webpage(webpage)
+        self.html_size()
+        for item in range(len(input_grid)):
+            
+            coordinates = self.coordinates_from_data(input_grid[item],webele_location)
+            #coordinates = self.grid_to_coordinates(item)
+            self.nav_web(coordinates,data[item])
+            #self.nav_web(coordinates,"yes")
         
         self.screenshots(screenshot_dir)
         
