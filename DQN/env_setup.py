@@ -336,7 +336,6 @@ class EnvWeb2D:
                 item_index_state = np.concatenate(([self.label_x_location[item][index]],self.input_x_location[item], [self.label_y_location[item][index]],self.input_y_location[item]),axis = None)
                 self.state_action_dict[item]['state'][index] = item_index_state
                 self.state_action_dict[item]['action'][index] = self.input_grid_num[item][index]
-
         
     def reset(self):
         
