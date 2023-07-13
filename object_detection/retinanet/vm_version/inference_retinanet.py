@@ -5,19 +5,34 @@ import tensorflow as tf
 from six import BytesIO
 from PIL import Image
 import matplotlib.pyplot as plt
+import pickle
+import argparse
 from object_detection.utils import visualization_utils as viz_utils
 from object_detection.builders import model_builder
 from object_detection.utils import config_util
 
-class DetectionRetinanet:
+class InferenceRetinanet:
 
-    def __init__(self, image_path, checkpoint_path, detected_image_path, category_index, pipeline_config, num_classes):
+    def __init__(self, image_path, checkpoint_path, detected_image_path, category_index_path, pipeline_config, num_classes):
 
+        """
+        Params:
+
+        image_path: test image path
+        checkpoint_path: checkpoint to be used for inference
+        detected_image_path: image detection 
+        category_index_path: its a dictionary of categories being defined (e.g 1,2,3, .. and the name of those)
+        pipeline_config: config file to be used for inference
+        num_classes: number of classess defined. type is int
+        
+        """
         self.image_path = os.path.expanduser(image_path)
-        #self.model = tf.saved_model.load(os.path.expanduser(model_path))
         self.checkpoint_path = os.path.expanduser(checkpoint_path)
         self.detected_image_path = os.path.expanduser(detected_image_path)
-        self.category_index = category_index
+
+        with open(os.path.expanduser(category_index_path), 'rb') as file:
+            self.category_index = pickle.load(file)
+
         self.pipeline_config = os.path.expanduser(pipeline_config)
         self.num_classes =num_classes
 
@@ -33,7 +48,7 @@ class DetectionRetinanet:
 
         return file_names_images
     
-    def load_image_into_numpy_array(self,path):
+    def load_image_into_numpy_array(self, path):
         """Load an image from file into a numpy array.
 
         Puts image into numpy array to feed into tensorflow graph.
@@ -86,22 +101,15 @@ class DetectionRetinanet:
 
         print('Building model and restoring weights for inference ....', flush=True)
 
-        # Load pipeline config and build a detection model.
-        #
-        # Since we are working off of a COCO architecture which predicts 90
-        # class slots by default, we override the `num_classes` field here to be just
-        # one (for our new rubber ducky class).
-        configs = config_util.get_configs_from_pipeline_file(self.pipeline_config)
+        configs = config_util.get_configs_from_pipeline_file(self.pipeline_config+'/pipeline.config')
         model_config = configs['model']
-        model_config.ssd.num_classes = self.num_classes
-        model_config.ssd.freeze_batchnorm = True
-        detection_model = model_builder.build(
-            model_config=model_config, is_training=False)
+        test_model = model_builder.build(model_config=model_config, is_training=False)
 
-        ckpt = tf.train.Checkpoint(model=detection_model)
-        ckpt.restore(tf.train.latest_checkpoint(self.checkpoint_path)).expect_partial()
+        ckpt = tf.compat.v2.train.Checkpoint(model=test_model)
+        ckpt.restore(self.checkpoint_path+'/ckpt-1').expect_partial()
 
-        self.model = detection_model #.signatures['serving_default']
+        self.model = test_model
+
         print('Weights restored!')
 
     def viz_images(self):
@@ -129,8 +137,6 @@ class DetectionRetinanet:
                 min_score_thresh=0.7)
         
             detection_arr = np.squeeze(img_tensor)
-            print(" \n viz : detection_boxes \n", boxes)
-            print(" \n viz : scores \n", scores)
 
             try:
                 plt.imshow(detection_arr)
@@ -145,19 +151,25 @@ class DetectionRetinanet:
         self.build_model_weights()
         self.viz_images()
 
+"""
+To be fixed to get it running through terminal 
 
-# the following few lines need to paramaterized
+if __name__ == '__main__':
+    # Create an ArgumentParser object
+    parser = argparse.ArgumentParser(description='Inference using Retinanet')
 
-#define category index
-num_classes = 3
-input_field_id = 1
-dropdown_id = 2
-text_id = 3
+    # Add arguments
+    parser.add_argument('-i_img', '--image_path', help = 'Test Image')
+    parser.add_argument('-i_ckpt', '--checkpoint_path', help='Checkpoint input file for inference')
+    parser.add_argument('-o_ckpt', '--detected_image_path', help='Vizualization: detected objects with bbox in png format')
+    parser.add_argument('-i_cat', '--category_index_path', help='Category index dictionary')
+    parser.add_argument('-i_cfg', '--pipeline_config', help='Pipeline Config input file for inference')
+    parser.add_argument('-c', '--num_classes', help='Number of classes')
 
-category_index = {
-    input_field_id: {'id': input_field_id, 'name': 'Input Field'},
-    dropdown_id:{'id':dropdown_id, 'name':'Drop Down'},
-    text_id:{'id':text_id, 'name':'Text'}
-    }
+    # Parse the command-line arguments
+    args = parser.parse_args()
 
-DetectionRetinanet('~/development/ILS/object_detection/data', '~/development/ILS/object_detection/retinanet/trained_models/checkpoints', '~/development/ILS/object_detection/retinanet/detected_images', category_index,'~/development/tensorflow_models/models-master/research/object_detection/configs/tf2/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8.config',3).main()
+    # Call the main function with the argument values
+    inf_ins = InferenceRetinanet(args.image_path, args.checkpoint_path,args.detected_image_path,args.category_index_path,args.pipeline_config,args.num_classes)
+    inf_ins.main()
+"""

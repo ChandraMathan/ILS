@@ -11,6 +11,8 @@ import tensorflow as tf
 import random
 import json
 import matplotlib.pyplot as plt
+import argparse
+import pickle
 from object_detection.utils import visualization_utils as viz_utils
 from object_detection.utils import config_util
 from object_detection.builders import model_builder
@@ -22,11 +24,11 @@ from object_detection.meta_architectures import ssd_meta_arch
 class ObjectDetection:
     """ Training and evaluation of object detection algorithm retinanet"""
     
-    def __init__(self, training_image_data_path, bbox_path, indices_class_list_path, category_index, num_classes, pipeline_config, checkpoint_path, model_export_path, config_export_path, detected_image_path):
+    def __init__(self, training_image_data_path, bbox_path, indices_class_list_path, category_index_path, num_classes, pipeline_config, checkpoint_path, model_export_path, config_export_path, batch_size, learning_rate, num_batches):
         
         """ 
         Params:
-        training_image_data_path : location of jpg training images which is path defined from home directory
+        training_image_data_path : location of jpg training images which is path defined from home directory and images to be numbered 100,101,.... in *.jpg extension
         bbox_path: path (defined from home directory) + file name of bounding box in '.npy' format with shape equals to (number of images, ) and each image (e.g bbox[0]) has shape of (num of objects, 4)
         indices_class_list_path: path (defined from home directory) + file name in '.npy' format containing classification (e.g, 1,2,3 ) of objects corresponding to the image and bounding box location defined in bbox_fname
         category_index: its a dictionary of categories being defined (e.g 1,2,3, .. and the name of those)
@@ -35,20 +37,27 @@ class ObjectDetection:
         checkpoint_path: location (defined from home directory) of checkpoint where checkpoint is used for intitiation of weights and for training
         model_export_path: path (defined from home directory) where trained model checkpoint is exported.
         config_export_path: path (defined from home directory) where trained model config file is exported.
-        detected_image_path: path (defined from home directory) where after inference is run, bounding box is drawn and image saved in this folder.
-
+        batch_size: size of the batch for training. should be less than the total examples. as int.
+        learning_rate: learning rate for training as float
+        num_batches: number of epochs which is same as num of batches
         """
 
         self.training_image_data_path = os.path.expanduser(training_image_data_path)
         self.bbox_path = os.path.expanduser(bbox_path)
         self.indices_class_path = os.path.expanduser(indices_class_list_path)
 
-        self.category_index = category_index
+        with open(os.path.expanduser(category_index_path), 'rb') as file:
+            self.category_index = pickle.load(file)
+
         self.num_classes =num_classes
         self.pipeline_config = os.path.expanduser(pipeline_config)
         self.checkpoint_path = os.path.expanduser(checkpoint_path)
         self.model_export_path = os.path.expanduser(model_export_path)
         self.config_export_path = os.path.expanduser(config_export_path)
+
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.num_batches = num_batches
 
         self.train_images_np = None
         self.bbox = None
@@ -59,8 +68,6 @@ class ObjectDetection:
 
         self.detection_model = None
         self.model_config = None
-
-        self.detected_image_path = os.path.expanduser(detected_image_path)
 
 
     def load_image_into_numpy_array(self, path):
@@ -233,10 +240,6 @@ class ObjectDetection:
         # These parameters can be tuned; since our training set has 5 images
         # it doesn't make sense to have a much larger batch size, though we could
         # fit more examples in memory if we wanted to.
-        batch_size = 4
-        learning_rate = 0.01 #orginally 0.01
-        num_batches = 100
-        #num_batches = 100
 
         # Select variables in top layers to fine-tune.
         trainable_variables = self.detection_model.trainable_variables
@@ -248,16 +251,16 @@ class ObjectDetection:
             if any([var.name.startswith(prefix) for prefix in prefixes_to_train]):
                 to_fine_tune.append(var)
 
-        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9)
-        train_step_fn = self.get_model_train_step_function(batch_size,
+        optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate, momentum=0.9)
+        train_step_fn = self.get_model_train_step_function(self.batch_size,
             self.detection_model, optimizer, to_fine_tune)
 
         print('Start fine-tuning!', flush=True)
-        for idx in range(num_batches):
+        for idx in range(self.num_batches):
             # Grab keys for a random subset of examples
             all_keys = list(range(len(self.train_images_np)))
             random.shuffle(all_keys)
-            example_keys = all_keys[:batch_size]
+            example_keys = all_keys[:self.batch_size]
 
             # Note that we do not do data augmentation in this demo.  If you want a
             # a fun exercise, we recommend experimenting with random horizontal flipping
@@ -271,7 +274,7 @@ class ObjectDetection:
             total_loss = train_step_fn(image_tensors, gt_boxes_list, gt_classes_list)
 
             if idx % 10 == 0:
-                print('batch ' + str(idx) + ' of ' + str(num_batches)
+                print('batch ' + str(idx) + ' of ' + str(self.num_batches)
                 + ', loss=' +  str(total_loss.numpy()), flush=True)
 
         print('Done fine-tuning!')
@@ -306,120 +309,8 @@ class ObjectDetection:
         preprocessed_image, shapes = self.detection_model.preprocess(input_tensor)
         prediction_dict = self.detection_model.predict(preprocessed_image, shapes)
         return self.detection_model.postprocess(prediction_dict, shapes)
-    
-    def detect_test(self, test_model,input_tensor):
-        """Run detection on an input image.
-
-        Args:
-            input_tensor: A [1, height, width, 3] Tensor of type tf.float32.
-            Note that height and width can be anything since the image will be
-            immediately resized according to the needs of the model within this
-            function.
-
-        Returns:
-            A dict containing 3 Tensors (`detection_boxes`, `detection_classes`,
-            and `detection_scores`).
-        """
-        preprocessed_image, shapes = test_model.preprocess(input_tensor)
-        prediction_dict = test_model.predict(preprocessed_image, shapes)
-        return test_model.postprocess(prediction_dict, shapes)
-    
-    def viz_images(self, file_names_images):
-        """ save visualized images after detection """
-
-        test_images_np = []
-        for file_name in file_names_images:
-            image_item_path = self.training_image_data_path+"/"+file_name
-            test_images_np.append(np.expand_dims(
-                self.load_image_into_numpy_array(image_item_path), axis=0))
-
-        
-  
-        label_id_offset = 1
-        for i in range(len(test_images_np)):
-            input_tensor = tf.convert_to_tensor(test_images_np[i], dtype=tf.float32)
-            detections = self.detect(input_tensor)
-
-            image_np = tf.convert_to_tensor(test_images_np[i])
-            boxes = detections['detection_boxes']
-            classes = tf.dtypes.cast(detections['detection_classes']+label_id_offset, tf.int8)
-            scores = detections['detection_scores']
-            category_index = self.category_index
-
-            print("shape of image_np:\n", image_np.shape)
-            print('\n images_np : \n', image_np)
-            print("\n boxes: \n", boxes)
-            print("\n classes: \n", classes)
-            print("\n scores: \n", scores)
-
-            img_tensor = viz_utils.draw_bounding_boxes_on_image_tensors(
-
-                image_np,
-                boxes,
-                classes,
-                scores,
-                category_index,
-                use_normalized_coordinates=True,
-                min_score_thresh=0.7)
-        
-            detection_arr = np.squeeze(img_tensor)
-
-            try:
-                plt.imshow(detection_arr)
-                plt.savefig(self.detected_image_path+"/detected_"+str(i)+'.png')
-            except Exception as e:
-                print('An error occured while saveing the plot: ', str(e))
-
-    def loaded_model(self,file_names_images):
-
-        tf.keras.backend.clear_session()
-        
-        configs = config_util.get_configs_from_pipeline_file(self.config_export_path+'/pipeline.config')
-        model_config = configs['model']
-        test_model = model_builder.build(model_config=model_config, is_training=False)
-
-        ckpt = tf.compat.v2.train.Checkpoint(model=test_model)
-        ckpt.restore(self.model_export_path+'/ckpt-1').expect_partial()
-
-        test_images_np = []
-        for file_name in file_names_images:
-            image_item_path = self.training_image_data_path+"/"+file_name
-            test_images_np.append(np.expand_dims(
-                self.load_image_into_numpy_array(image_item_path), axis=0))
-
-        label_id_offset = 1
-        for i in range(len(test_images_np)):
-            input_tensor = tf.convert_to_tensor(test_images_np[i], dtype=tf.float32)
-            detections = self.detect_test(test_model, input_tensor)
-
-            image_np = tf.convert_to_tensor(test_images_np[i])
-            boxes = detections['detection_boxes']
-            classes = tf.dtypes.cast(detections['detection_classes']+label_id_offset, tf.int8)
-            scores = detections['detection_scores']
-            category_index = self.category_index
-
-            img_tensor = viz_utils.draw_bounding_boxes_on_image_tensors(
-
-                image_np,
-                boxes,
-                classes,
-                scores,
-                category_index,
-                use_normalized_coordinates=True,
-                min_score_thresh=0.7)
-        
-            detection_arr = np.squeeze(img_tensor)
-
-            try:
-                plt.imshow(detection_arr)
-                plt.savefig(self.detected_image_path+"/detected_loaded_"+str(i+10)+'.png')
-            except Exception as e:
-                print('An error occured while saveing the plot: ', str(e))
-
-
-    
+ 
     def main(self):
-
         sorted_file_names = self.sort_filenames() #create list of file names of images in ascending order
         numpy_image = self.np_image(sorted_file_names) #convert images to numpy
         self.bbox = self.load_numpy(self.bbox_path) #load bbox
@@ -427,26 +318,39 @@ class ObjectDetection:
         self.tensor_ground_truth() #create tensors for image, bbox, class
         self.build_model()
         self.model_training()
-        self.viz_images(sorted_file_names)
         self.save_model()
-        self.loaded_model(sorted_file_names)
 
         print("\n training complete !")
         
 
-# the following few lines need to paramaterized
+"""
+To be fixed to get it running through terminal 
 
-#define category index
-num_classes = 3
-input_field_id = 1
-dropdown_id = 2
-text_id = 3
+if __name__ == '__main__':
+    # Create an ArgumentParser object
+    parser = argparse.ArgumentParser(description='Object Detection training using Retinanet')
 
-category_index = {
-    input_field_id: {'id': input_field_id, 'name': 'Input Field'},
-    dropdown_id:{'id':dropdown_id, 'name':'Drop Down'},
-    text_id:{'id':text_id, 'name':'Text'}
-    }
+    
+    # Add arguments
+    parser.add_argument('-i_img', '--training_image_data_path', help = 'Training Image')
+    parser.add_argument('-i_bb', '--bbox_path', help='Bounding Box numpy file')
+    parser.add_argument('-i_idxcl', '--indices_class_list_path', help='Class index file corresponding to bounding box numpy file')
+    parser.add_argument('-i_cat', '--category_index', help='Category index dictionary')
+    parser.add_argument('-c', '--num_classes', help='Number of classes')
+    parser.add_argument('-i_cfg', '--pipeline_config_path', help='Pipeline Config input file for training')
+    parser.add_argument('-i_ckpt', '--checkpoint_path', help='Checkpoint input file for training')
+    parser.add_argument('-o_ckpt', '--model_export_path', help='Checkpoint Output path after training')
+    parser.add_argument('-o_cfg', '--config_export_path', help='Config Output path after training')
+    parser.add_argument('-b', '--batch_size', help='Batch Size for training')
+    parser.add_argument('-lr', '--learning_rate', help='Learning Rate for training')
+    parser.add_argument('-n_batch', '--num_batches', help='number of bacthes for training')
+    # Parse the command-line arguments
+    args = parser.parse_args()
+
+    # Call the main function with the argument values
+    obj_det_ins = ObjectDetection(args.training_image_data_path, args.bbox_path,args.indices_class_list_path,args.category_index,args.num_classes,args.pipeline_config_path,args.checkpoint_path,args.model_export_path,args.config_export_path,args.batch_size,args.learning_rate,args.num_batches)
+    obj_det_ins.main()
 
 
-ObjectDetection('~/development/ILS/object_detection/data','~/development/ILS/object_detection/data/bbox.npy','~/development/ILS/object_detection/data/indices_class_list.npy', category_index, 3, '~/development/tensorflow_models/models-master/research/object_detection/configs/tf2/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8.config', '~/development/assets/checkpoint_retinanet/ckpt-0', '~/development/ILS/object_detection/retinanet/trained_models/checkpoints','~/development/ILS/object_detection/retinanet/trained_models/configs', '~/development/ILS/object_detection/retinanet/detected_images').main()
+"""
+
