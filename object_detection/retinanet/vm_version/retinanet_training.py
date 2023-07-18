@@ -108,7 +108,7 @@ class ObjectDetection:
         #this format is validated in 'retinanet_labelImg'
         file_names_sorted = []
         for file in file_names_images:
-            file_names_sorted.append(int(file[0:3]))
+            file_names_sorted.append(int(file[-7:-4]))
 
         file_names_sorted.sort()
         file_names = [str(x)+'.jpg' for x in file_names_sorted]
@@ -120,6 +120,7 @@ class ObjectDetection:
         train_images_np = []
         for image_item in file_name:
             image_item_path = self.training_image_data_path+"/"+image_item
+            print("\n image item path: ", image_item_path)
             train_images_np.append(self.load_image_into_numpy_array(image_item_path))
         self.train_images_np = train_images_np
 
@@ -312,25 +313,40 @@ class ObjectDetection:
  
     def main(self):
         sorted_file_names = self.sort_filenames() #create list of file names of images in ascending order
+        print("\nsorted_file_names: \n", sorted_file_names)
         numpy_image = self.np_image(sorted_file_names) #convert images to numpy
+        print("\n self.train_images_np: \n", self.train_images_np)
         self.bbox = self.load_numpy(self.bbox_path) #load bbox
+        print("\n self.bbox: \n", self.bbox)
         self.indices_class = self.load_numpy(self.indices_class_path) #load class indices
+        print("\n self.indices_class: \n", self.indices_class)
         self.tensor_ground_truth() #create tensors for image, bbox, class
+        print("\n self.gt_box_tensors: \n", self.gt_box_tensors)
+        print("\n lenght of self.gt_box_tensors: \n", len(self.gt_box_tensors))
         self.build_model()
         self.model_training()
         self.save_model()
 
         print("\n training complete !")
         
+def check_args(parser, *args):
+    """ Check if the arg values are None """
 
-"""
-To be fixed to get it running through terminal 
+    # Parse the command-line arguments
+    args, unknown = parser.parse_known_args()
+
+    # Iterate over the defined arguments
+    for arg in vars(args):
+        arg_value = getattr(args, arg)
+        if arg_value == None:
+            return False
+    
+    return True
 
 if __name__ == '__main__':
     # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description='Object Detection training using Retinanet')
 
-    
     # Add arguments
     parser.add_argument('-i_img', '--training_image_data_path', help = 'Training Image')
     parser.add_argument('-i_bb', '--bbox_path', help='Bounding Box numpy file')
@@ -344,13 +360,12 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch_size', help='Batch Size for training')
     parser.add_argument('-lr', '--learning_rate', help='Learning Rate for training')
     parser.add_argument('-n_batch', '--num_batches', help='number of bacthes for training')
+    
     # Parse the command-line arguments
     args = parser.parse_args()
 
-    # Call the main function with the argument values
-    obj_det_ins = ObjectDetection(args.training_image_data_path, args.bbox_path,args.indices_class_list_path,args.category_index,args.num_classes,args.pipeline_config_path,args.checkpoint_path,args.model_export_path,args.config_export_path,args.batch_size,args.learning_rate,args.num_batches)
-    obj_det_ins.main()
-
-
-"""
+    if check_args(parser, args) == True:
+        # Call the main function with the argument values
+        obj_det_ins = ObjectDetection(args.training_image_data_path, args.bbox_path,args.indices_class_list_path,args.category_index,args.num_classes,args.pipeline_config_path,args.checkpoint_path,args.model_export_path,args.config_export_path,args.batch_size,args.learning_rate,args.num_batches)
+        obj_det_ins.main()
 

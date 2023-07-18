@@ -92,8 +92,6 @@ class InferenceRetinanet:
         prediction_dict = self.model.predict(preprocessed_image, shapes)
         return self.model.postprocess(prediction_dict, shapes)
     
-
-
     def build_model_weights(self):
         """ build model and restore wights """
 
@@ -112,47 +110,63 @@ class InferenceRetinanet:
 
         print('Weights restored!')
 
-    def viz_images(self):
-        """ save visualized images after detection """
-
+    def bbox_class (self,image_np):
+        """ predict boounding box and classes"""
         label_id_offset = 1
-        for i in range(len(self.images_np)):
-            input_tensor = tf.convert_to_tensor(self.images_np[i], dtype=tf.float32)
-            detections = self.detect(input_tensor)
+        input_tensor = tf.convert_to_tensor(image_np, dtype=tf.float32)
+        detections = self.detect(input_tensor)
+        boxes = detections['detection_boxes']
+        classes = tf.dtypes.cast(detections['detection_classes']+label_id_offset, tf.int8)
+        scores = detections['detection_scores']
 
-            image_np = tf.convert_to_tensor(self.images_np[i])
-            boxes = detections['detection_boxes']
-            classes = tf.dtypes.cast(detections['detection_classes']+label_id_offset, tf.int8)
-            scores = detections['detection_scores']
-            category_index = self.category_index
+        return boxes, classes, scores
+    
+    def viz_images(self, image_np, boxes, classes, scores,img_index):
+        """ plot bbox and save images """
 
-            img_tensor = viz_utils.draw_bounding_boxes_on_image_tensors(
+        img_tensor = viz_utils.draw_bounding_boxes_on_image_tensors(
 
-                image_np,
+                tf.convert_to_tensor(image_np),
                 boxes,
                 classes,
                 scores,
-                category_index,
+                self.category_index,
                 use_normalized_coordinates=True,
                 min_score_thresh=0.7)
         
-            detection_arr = np.squeeze(img_tensor)
+        detection_arr = np.squeeze(img_tensor)
 
-            try:
-                plt.imshow(detection_arr)
-                plt.savefig(self.detected_image_path+"/detected_"+str(i)+'.png')
-            except Exception as e:
-                print('An error occured while saveing the plot: ', str(e))
+        try:
+            plt.imshow(detection_arr)
+            plt.savefig(self.detected_image_path+"/detected_"+str(img_index)+'.png')
+        except Exception as e:
+            print('An error occured while saveing the plot: ', str(e))
+
 
     def main(self):
 
         file_names = self.get_file_names()
         self.images_to_np(file_names)
         self.build_model_weights()
-        self.viz_images()
+        for i in range(len(self.images_np)):
+            boxes, classes, scores = self.bbox_class (self.images_np[i])
+            self.viz_images(self.images_np[i], boxes, classes, scores,i)
+        print("Inference completed !")
 
-"""
-To be fixed to get it running through terminal 
+def check_args(parser, *args):
+    """ Check if the arg values are None """
+
+    # Parse the command-line arguments
+    args, unknown = parser.parse_known_args()
+
+    # Iterate over the defined arguments
+    for arg in vars(args):
+        arg_value = getattr(args, arg)
+        if arg_value == None:
+            return False
+    
+    return True
+
 
 if __name__ == '__main__':
     # Create an ArgumentParser object
@@ -169,7 +183,9 @@ if __name__ == '__main__':
     # Parse the command-line arguments
     args = parser.parse_args()
 
-    # Call the main function with the argument values
-    inf_ins = InferenceRetinanet(args.image_path, args.checkpoint_path,args.detected_image_path,args.category_index_path,args.pipeline_config,args.num_classes)
-    inf_ins.main()
-"""
+    if check_args(parser, args) == True:
+        # Call the main function with the argument values
+        inf_ins = InferenceRetinanet(args.image_path, args.checkpoint_path,args.detected_image_path,args.category_index_path,args.pipeline_config,args.num_classes)
+        inf_ins.main()
+
+

@@ -12,6 +12,16 @@ from inference_retinanet import InferenceRetinanet
         
 """
 
+image_path = '~/development/ILS/object_detection/data/data_new/processed_images'
+checkpoint_path = '~/development/ILS/object_detection/data/data_new/checkpoints'
+detected_image_path = '~/development/ILS/object_detection/retinanet/detected_images'
+category_index_path = '~/development/ILS/object_detection/data/data_new/processed_images/category_index.pickle'
+pipeline_config = '~/development/ILS/object_detection/data/data_new/configs'
+num_classes = 1
+
+InferenceRetinanet(image_path, checkpoint_path, detected_image_path, category_index_path, pipeline_config, num_classes).main()
+
+"""
 image_path = '~/development/ILS/object_detection/data'
 checkpoint_path = '~/development/ILS/object_detection/retinanet/trained_models/checkpoints'
 detected_image_path = '~/development/ILS/object_detection/retinanet/detected_images'
@@ -19,4 +29,7 @@ category_index_path = '~/development/ILS/object_detection/data/category_index.pi
 pipeline_config = '~/development/ILS/object_detection/retinanet/trained_models/configs'
 num_classes = 3
 
-InferenceRetinanet(image_path, checkpoint_path, detected_image_path, category_index_path, pipeline_config, num_classes).main()
+
+
+
+"""

@@ -18,6 +18,24 @@ from retinanet_training import ObjectDetection
         
 """
 
+training_image_data_path = '~/development/ILS/object_detection/data/data_new/processed_images'
+bbox_path = '~/development/ILS/object_detection/data/data_new/processed_images/bbox.npy'
+indices_class_list_path = '~/development/ILS/object_detection/data/data_new/processed_images/indices_class_list.npy'
+category_index_path = '~/development/ILS/object_detection/data/data_new/processed_images/category_index.pickle'
+num_classes = 1
+pipeline_config_path = '~/development/tensorflow_models/models-master/research/object_detection/configs/tf2/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8.config'
+checkpoint_path = '~/development/assets/checkpoint_retinanet/ckpt-0'
+model_export_path = '~/development/ILS/object_detection/data/data_new/checkpoints'
+config_export_path = '~/development/ILS/object_detection/data/data_new/configs'
+batch_size = 2
+learning_rate = 0.01
+num_batches = 100
+
+
+ObjectDetection(training_image_data_path,bbox_path, indices_class_list_path, category_index_path, num_classes, pipeline_config_path, checkpoint_path , model_export_path, config_export_path,batch_size, learning_rate,num_batches).main()
+
+"""
+
 training_image_data_path = '~/development/ILS/object_detection/data'
 bbox_path = '~/development/ILS/object_detection/data/bbox.npy'
 indices_class_list_path = '~/development/ILS/object_detection/data/indices_class_list.npy'
@@ -32,5 +50,4 @@ learning_rate = 0.01
 num_batches = 100
 
 
-ObjectDetection(training_image_data_path,bbox_path, indices_class_list_path, category_index_path, num_classes, pipeline_config_path, checkpoint_path , model_export_path, config_export_path,batch_size, learning_rate,num_batches).main()
-
+"""
