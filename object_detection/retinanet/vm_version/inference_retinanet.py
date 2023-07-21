@@ -111,7 +111,7 @@ class InferenceRetinanet:
         print('Weights restored!')
 
     def bbox_class (self,image_np):
-        """ predict boounding box and classes"""
+        """ predict boounding box and classes """
         label_id_offset = 1
         input_tensor = tf.convert_to_tensor(image_np, dtype=tf.float32)
         detections = self.detect(input_tensor)
